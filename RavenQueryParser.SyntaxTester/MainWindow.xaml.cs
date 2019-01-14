@@ -70,9 +70,9 @@ namespace RavenQuery.SyntaxTester
             _parser.query();
 
             var errors = _errorListener.SyntaxErrors.Aggregate(new StringBuilder(), (sb, err) => 
-                sb.AppendLine(err.ToString().Replace("\\n",string.Empty)
-                                            .Replace("\\r",string.Empty)
-                                            .Replace("\\t",string.Empty))).ToString();
+                sb.AppendLine(err.ToString().Replace("\\n"," ")
+                                            .Replace("\\r"," ")
+                                            .Replace("\\t"," "))).ToString();
             AddSquigglies();
             Errors.Text = errors;
         }
