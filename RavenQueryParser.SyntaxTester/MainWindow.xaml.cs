@@ -20,8 +20,8 @@ namespace RavenQuery.SyntaxTester
     /// </summary>
     public partial class MainWindow : Window
     {
-        private readonly RavenQueryLexer _lexer;
-        private readonly RavenQueryParser.RavenQueryParser _parser;
+        private readonly QueryLexer _lexer;
+        private readonly QueryParser _parser;
         private readonly SyntaxErrorListener _errorListener = new SyntaxErrorListener();
         private ITextMarkerService _textMarkerService;
 
@@ -37,8 +37,8 @@ namespace RavenQuery.SyntaxTester
             }
 
             CodeEditor.SyntaxHighlighting = HighlightingManager.Instance.GetDefinition("RQL");
-            _lexer = new RavenQueryLexer(null);
-            _parser = new RavenQueryParser.RavenQueryParser(null);
+            _lexer = new QueryLexer(null);
+            _parser = new QueryParser(null);
             _parser.AddErrorListener(_errorListener);
 
             Observable.FromEventPattern(

@@ -1,6 +1,6 @@
 ﻿namespace RavenQueryParser
 {
-    partial class RavenQueryParser
+    partial class QueryLexer
     {
     }
 }

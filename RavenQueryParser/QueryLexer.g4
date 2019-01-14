@@ -1,11 +1,11 @@
-lexer grammar RavenQueryLexer;
+lexer grammar QueryLexer;
 
 channels { COMMENT, ERROR, WHITESPACE }
 
 //query entry points
 FROM: F R O M;
 MATCH: M A T C H -> mode(Graph);
-
+ 
 //keywords
 DECLARE_FUNCTION: D E C L A R E ' ' F U N C T I O N -> mode(Function);
 WHERE : W H E R E;

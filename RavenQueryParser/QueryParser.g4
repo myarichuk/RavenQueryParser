@@ -1,13 +1,13 @@
-parser grammar RavenQueryParser;
+parser grammar QueryParser;
 
-options { tokenVocab=RavenQueryLexer; }
+options { tokenVocab=QueryLexer; }
 
 query: projectionFunction* (patch | documentQuery | graphQuery) EOF;
 
 //document query
 documentQuery:  FROM querySource loadClause? whereClause? orderByClause? selectClause? includeClause?;
 patch: FROM querySource loadClause? whereClause? orderByClause? updateClause;
-
+ 
 //graph query
 graphQuery: (nodeWithClause | edgeWithClause)* MATCH patternMatchExpression whereClause? orderByClause? selectClause?;
 nodeWithClause: WITH OPEN_CPAREN documentQuery CLOSE_CPAREN AS alias = IDENTIFIER;
