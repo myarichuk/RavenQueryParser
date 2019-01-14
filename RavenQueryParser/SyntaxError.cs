@@ -5,14 +5,14 @@ namespace RavenQueryParser
 {
     public class SyntaxError
     {
-        public SyntaxError(IRecognizer recognizer, IToken offendingSymbol, int line, int charPositionInLine, string message, RecognitionException thrownRecognitionException)
+        public SyntaxError(IRecognizer recognizer, IToken offendingSymbol, int line, int charPositionInLine, string message, RecognitionException recognitionException)
         {
             Recognizer = recognizer;
             OffendingSymbol = offendingSymbol;
             Line = line;
             CharPositionInLine = charPositionInLine;
             Message = message;
-            ThrownRecognitionException1 = thrownRecognitionException;
+            RecognitionException = recognitionException;
         }
 
         public IRecognizer Recognizer { get; }
@@ -20,7 +20,7 @@ namespace RavenQueryParser
         public int Line { get; }
         public int CharPositionInLine { get; }
         public string Message { get; }
-        public RecognitionException ThrownRecognitionException1 { get; }
+        public RecognitionException RecognitionException { get; }
 
         public override string ToString()
         {
