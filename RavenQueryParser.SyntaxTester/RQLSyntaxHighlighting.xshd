@@ -1,0 +1,81 @@
+﻿<?xml version="1.0"?>
+<SyntaxDefinition name="RQL" xmlns="http://icsharpcode.net/sharpdevelop/syntaxdefinition/2008">
+<Color name="Comment" foreground="Green" exampleText="// comment" />
+	<Color name="String" foreground="Magenta" exampleText="string text = &quot;Hello, World!&quot;"/>
+	<Color name="Char" foreground="Magenta"/>
+	<Color name="MethodCall" foreground="DarkCyan" fontWeight="bold" exampleText="o.ToString();"/>
+	<Color name="NumberLiteral" foreground="DarkBlue" exampleText="3.1415"/>
+  <Color name="ThisReference" fontWeight="bold" />
+  <Color name="Punctuation" fontWeight="bold" />
+	<Color name="LiteralKeywords" foreground="Purple" fontWeight="bold" exampleText="if (value = null)"/>
+	<Color name="Keywords" fontWeight="bold" foreground="Blue" exampleText="if (a) {} else {}"/>
+	<Color name="TypeKeywords" fontWeight="bold" foreground="DarkCyan" />
+
+  <!-- This is the main ruleset. -->
+  <RuleSet ignoreCase="true">
+    <Span color="Comment" begin="//" />
+    <Span color="Comment" multiline="true" begin="/\*" end="\*/" />
+		
+    <Span color="String">
+      <Begin>"</Begin>
+      <End>"</End>
+      <RuleSet>
+        <!-- nested span for escape sequences -->
+        <Span begin="\\" end="." />
+      </RuleSet>
+    </Span>
+
+    <Span color="String">
+      <Begin>'</Begin>
+      <End>'</End>      
+    </Span>
+
+    <Keywords color="ThisReference">
+      <Word>this</Word>
+    </Keywords>
+
+    <Keywords color="Keywords">
+      <Word>from</Word>
+      <Word>match</Word>
+      <Word>where</Word>
+      <Word>include</Word>
+      <Word>select</Word>
+      <Word>between</Word>
+      <Word>and</Word>
+      <Word>or</Word>
+      <Word>not</Word>
+      <Word>in</Word>
+      <Word>as</Word>
+      <Word>all in</Word>
+      <Word>load</Word>
+      <Word>update</Word>
+      <Word>declare function</Word>
+    </Keywords>		
+		
+    <Keywords color="LiteralKeywords">
+      <Word>true</Word>
+      <Word>false</Word>
+      <Word>null</Word>
+    </Keywords>		
+    
+    <Rule color="MethodCall">
+      \b
+      [\d\w_]+  # an identifier
+      (?=\s*\() # followed by (
+    </Rule>
+
+    <Rule color="Punctuation">
+      [?,.;()\[\]{}+\-/%*&lt;&gt;^+~!|&amp;]+
+    </Rule>
+
+    <!-- Digits -->
+    <Rule foreground="DarkBlue">
+      \b0[xX][0-9a-fA-F]+  # hex number
+      |    \b
+      (    \d+(\.[0-9]+)?   #number with optional floating point
+      |    \.[0-9]+         #or just starting with floating point
+      )
+      ([eE][+-]?[0-9]+)? # optional exponent
+    </Rule>
+  </RuleSet>
+</SyntaxDefinition>

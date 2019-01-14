@@ -1,6 +1,6 @@
 lexer grammar RavenQueryLexer;
 
-channels { COMMENT, ERROR }
+channels { COMMENT, ERROR, WHITESPACE }
 
 //query entry points
 FROM: F R O M;
@@ -53,7 +53,7 @@ fragment LETTER: [A-Za-z];
 fragment DIGIT: [0-9];
 
 //punctuation
-SPACE: (' '| '\t' | '\r'? '\n') -> skip;
+SPACE: (' '| '\t' | '\r'? '\n') -> channel(WHITESPACE);
 COMMA: ',';
 BLOCK_COMMENT: '/*' .+? '*/' -> channel(COMMENT);
 LINE_COMMENT: '//' ~[\r\n]* ('\r'? '\n' | EOF) -> channel(COMMENT);
