@@ -1,5 +1,4 @@
 ﻿using Antlr4.Runtime;
-using Humanizer;
 
 namespace RavenQueryParser
 {
@@ -22,9 +21,6 @@ namespace RavenQueryParser
         public string Message { get; }
         public RecognitionException RecognitionException { get; }
 
-        public override string ToString()
-        {
-            return $"{Message}, {nameof(Line)}: {Line}, {nameof(CharPositionInLine).Humanize()}: {CharPositionInLine}, {nameof(OffendingSymbol).Humanize()}: {OffendingSymbol.Text}";
-        }
+        public override string ToString() => $"{Message}, {nameof(Line)}: {Line}, Character Position: {CharPositionInLine}, Offending Symbol: {OffendingSymbol.Text}";
     }    
 }
