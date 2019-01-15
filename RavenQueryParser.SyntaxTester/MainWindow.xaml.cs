@@ -39,6 +39,7 @@ namespace RavenQuery.SyntaxTester
             CodeEditor.SyntaxHighlighting = HighlightingManager.Instance.GetDefinition("RQL");
             _lexer = new QueryLexer(null);
             _parser = new QueryParser(null);
+            _parser.ErrorHandler = new UserFriendlyErrorStrategy();
             _parser.AddErrorListener(_errorListener);
 
             Observable.FromEventPattern(
