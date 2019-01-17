@@ -2,11 +2,12 @@ parser grammar QueryParser;
 
 options { tokenVocab=QueryLexer; }
 
-query: projectionFunction* (patch | documentQuery | graphQuery) EOF;
+//note: query and patch are separate to prevent ambiguities
+query: projectionFunction* (documentQuery | graphQuery) EOF;
+patch: FROM querySource loadClause? whereClause? orderByClause? updateClause;
 
 //document query
 documentQuery:  FROM querySource loadClause? whereClause? orderByClause? selectClause? includeClause?;
-patch: FROM querySource loadClause? whereClause? orderByClause? updateClause;
  
 //graph query
 graphQuery: (nodeWithClause | edgeWithClause)* MATCH patternMatchExpression whereClause? orderByClause? selectClause?;
@@ -28,20 +29,17 @@ patternMatchExpression:
 //shared clauses/expressions
 querySource: 
 	  ALL_DOCS (AS alias = IDENTIFIER)? #AllDocsSource
-	| atSign = AT_SIGN (AS alias = IDENTIFIER)? { NotifyErrorListeners(((dynamic)$ctx).atSign,"Invalid collection name - it must contain alphanumeric characters in addition to '@'", new RecognitionException(this,_input,$ctx)); } #InvalidCollectionNameSource
-	| collection (AS alias = IDENTIFIER)? #CollectionSource
-	| INDEX (AS alias = IDENTIFIER)? { NotifyErrorListeners(((dynamic)$ctx).atSign,"After 'index' name there must be an index name", new RecognitionException(this,_input,$ctx)); } #NoIndexNameSource 
+	| collectionName = IDENTIFIER (AS alias = IDENTIFIER)? #CollectionSource
 	| INDEX indexName = STRING (AS alias = IDENTIFIER)? #IndexSource
 	;
 
-collection: AT_SIGN? IDENTIFIER;
 projectionFunction: DECLARE_FUNCTION functionName = IDENTIFIER OPEN_PAREN (params += IDENTIFIER (COMMA params+= IDENTIFIER)*)? CLOSE_PAREN
                     OPEN_CPAREN
                         sourceCode = SOURCE_CODE_CHAR*
                     CLOSE_CPAREN;
 
-expressionWithAlias: expression AS alias = IDENTIFIER;
-loadClause: LOAD params += expressionWithAlias (COMMA params+= expressionWithAlias)*;
+loadParam: identifier = IDENTIFIER AS alias = IDENTIFIER;
+loadClause: LOAD params += loadParam (COMMA params+= loadParam)*;
 
 includeClause: INCLUDE expressionList;
 whereClause: WHERE conditionExpression;

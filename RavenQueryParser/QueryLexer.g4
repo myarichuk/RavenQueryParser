@@ -3,41 +3,41 @@ lexer grammar QueryLexer;
 channels { COMMENT, ERROR, WHITESPACE }
 
 //query entry points
-FROM: F R O M;
-MATCH: M A T C H -> mode(Graph);
+FROM: 'from';
+MATCH: 'match' -> mode(Graph);
  
 //keywords
-DECLARE_FUNCTION: D E C L A R E ' ' F U N C T I O N -> mode(Function);
-WHERE : W H E R E;
-BETWEEN: B E T W E E N;
-INCLUDE: I N C L U D E;
-SELECT: S E L E C T;
-DISTINCT: D I S T I N C T;
-ORDERBY: O R D E R ' ' B Y;
-LOAD: L O A D;
-AS: A S;
-DESC: D E S C; //for orderby clauses
-EDGES: E D G E S;
+DECLARE_FUNCTION: 'declare function' -> mode(Function);
+WHERE : 'where';
+BETWEEN: 'between';
+INCLUDE: 'include';
+SELECT: 'select';
+DISTINCT: 'distinct';
+ORDERBY: 'order by';
+LOAD: 'load';
+AS: 'as';
+DESC: 'desc'; //for orderby clauses
+EDGES: 'edges';
 ALL_DOCS: '@all_docs';
-UPDATE: U P D A T E -> mode(FunctionImplementation);
-WITH: W I T H;
-AND: A N D;
-OR: O R;
-NOT: N O T;
+UPDATE: 'update' -> mode(FunctionImplementation);
+WITH: 'with';
+AND: 'and';
+OR: 'or';
+NOT: 'not';
 
-IN: I N;
-ALL_IN: A L L '_' I N;
+IN: 'int';
+ALL_IN: 'all in';
 
 DOT: '.';
 
-INDEX: I N D E X;
+INDEX: 'index';
 
 //literals
 DOUBLE: DIGIT+ '.' DIGIT+;
 LONG: DIGIT+;
 
-TRUE: T R U E;
-FALSE: F A L S E;
+TRUE: 'true';
+FALSE: 'false';
 
 GREATER: '>';
 LESSER: '<';
@@ -71,33 +71,6 @@ CLOSE_BRACKET: ']';
 AT_SIGN: '@';
 IDENTIFIER: (LETTER | '_' ) (LETTER | DIGIT | '_')*;
 PARAMETER: '$' IDENTIFIER;
-
-fragment A : [aA]; // match either an 'a' or 'A'
-fragment B : [bB];
-fragment C : [cC];
-fragment D : [dD];
-fragment E : [eE];
-fragment F : [fF];
-fragment G : [gG];
-fragment H : [hH];
-fragment I : [iI];
-fragment J : [jJ];
-fragment K : [kK];
-fragment L : [lL];
-fragment M : [mM];
-fragment N : [nN];
-fragment O : [oO];
-fragment P : [pP];
-fragment Q : [qQ];
-fragment R : [rR];
-fragment S : [sS];
-fragment T : [tT];
-fragment U : [uU];
-fragment V : [vV];
-fragment W : [wW];
-fragment X : [xX];
-fragment Y : [yY];
-fragment Z : [zZ];
 
 mode Graph;
 

@@ -1,7 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using Antlr4.Runtime;
 using Antlr4.Runtime.Misc;
 using Humanizer;
@@ -9,15 +7,7 @@ using Humanizer;
 namespace RavenQueryParser
 {
     public class UserFriendlyErrorStrategy : DefaultErrorStrategy
-    {
-        public override void ReportError(Parser recognizer, RecognitionException e)
-        {
-            if (this.InErrorRecoveryMode(recognizer))
-                return;
-
-            base.ReportError(recognizer, e);
-        }
-
+    {                     
         protected override void ReportInputMismatch(Parser recognizer, InputMismatchException e)
         {
             var expectedTokens = string.Join(",",
@@ -26,6 +16,12 @@ namespace RavenQueryParser
             var msg = $"Found unrecognized input. Expected the input to be one of the following: {expectedTokens}";
 
             NotifyErrorListeners(recognizer, msg, e);
-        }     
+        }
+
+        private IEnumerable<string> GetTokenNames(Parser recognizer, IntervalSet intervalSet)
+        {
+            foreach (var tokenType in intervalSet.ToIntegerList())
+                yield return recognizer.Vocabulary.GetSymbolicName(tokenType);
+        }
     }
 }

@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -16,6 +17,12 @@
     <PackageReference Include="Antlr4.Runtime" Version="4.6.6" />
     <PackageReference Include="Humanizer" Version="2.5.16" />
     <PackageReference Include="Microsoft.CSharp" Version="4.5.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Antlr4 Update="QueryParser.g4">
+      <ForceAtn>false</ForceAtn>
+    </Antlr4>
   </ItemGroup>
 
 </Project>

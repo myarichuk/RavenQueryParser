@@ -24,6 +24,7 @@ namespace RavenQuery.SyntaxTester
         private readonly QueryParser _parser;
         private readonly SyntaxErrorListener _errorListener = new SyntaxErrorListener();
         private ITextMarkerService _textMarkerService;
+        protected internal readonly UserFriendlyErrorStrategy _errorStrategy;
 
         public MainWindow()
         {
@@ -39,7 +40,8 @@ namespace RavenQuery.SyntaxTester
             CodeEditor.SyntaxHighlighting = HighlightingManager.Instance.GetDefinition("RQL");
             _lexer = new QueryLexer(null);
             _parser = new QueryParser(null);
-            _parser.ErrorHandler = new UserFriendlyErrorStrategy();
+            _errorStrategy = new UserFriendlyErrorStrategy();
+            _parser.ErrorHandler = _errorStrategy;
             _parser.AddErrorListener(_errorListener);
 
             Observable.FromEventPattern(
@@ -66,8 +68,10 @@ namespace RavenQuery.SyntaxTester
         {           
              _textMarkerService.RemoveAll(m => true);
             _errorListener.Reset();
-            _lexer.SetInputStream(new AntlrInputStream(CodeEditor.Text));
+            var inputStream = new AntlrInputStream(CodeEditor.Text);
+            _lexer.SetInputStream(inputStream);
             _parser.SetInputStream(new CommonTokenStream(_lexer));
+
             _parser.query();
 
             var errors = _errorListener.SyntaxErrors.Aggregate(new StringBuilder(), (sb, err) => 
@@ -82,9 +86,9 @@ namespace RavenQuery.SyntaxTester
         {
             foreach (var error in _errorListener.SyntaxErrors)
             {                
-                var lineOffset = CodeEditor.Document.Lines[error.Line - 1].Offset;
+                var lineOffset = CodeEditor.Document.Lines[Math.Max(0,error.Line - 1)].Offset;
                 var length = error.OffendingSymbol.Text == "<EOF>" ? 0 : error.OffendingSymbol.Text.Length;
-                var marker = _textMarkerService.Create(lineOffset + error.CharPositionInLine, length);
+                var marker = _textMarkerService.Create(lineOffset + Math.Max(0,error.CharPositionInLine), length);
                 marker.MarkerTypes = TextMarkerTypes.SquigglyUnderline;
                 marker.MarkerColor = Colors.Red;
 
