@@ -10,12 +10,24 @@ namespace RavenQueryParser
     {                     
         protected override void ReportInputMismatch(Parser recognizer, InputMismatchException e)
         {
-            var expectedTokens = string.Join(",",
-                e.GetExpectedTokens().ToIntegerList().Select(tokenType =>
-                    $"'{recognizer.Vocabulary.GetSymbolicName(tokenType).Humanize().ToLowerInvariant()}'"));
-            var msg = $"Found unrecognized input. Expected the input to be one of the following: {expectedTokens}";
+            var msg = string.Empty;
+            RecognitionException exceptionToThrow = null;
+            var previousTokenType = recognizer.InputStream.La(-1);
+            switch (recognizer.CurrentToken.Type)
+            {
+                case QueryLexer.WHERE when previousTokenType == QueryLexer.FROM:
+                    break;
+                default:
+                    var expectedTokens = string.Join(",",
+                        e.GetExpectedTokens().ToIntegerList().Select(tokenType =>
+                            $"'{recognizer.Vocabulary.GetSymbolicName(tokenType).Humanize().ToLowerInvariant()}'"));
 
-            NotifyErrorListeners(recognizer, msg, e);
+                    msg = $"Found unrecognized input. Expected the input to be one of the following: {expectedTokens}";
+                    exceptionToThrow = e;
+                    break;
+            }
+
+            NotifyErrorListeners(recognizer, msg, exceptionToThrow);
         }
 
         private IEnumerable<string> GetTokenNames(Parser recognizer, IntervalSet intervalSet)

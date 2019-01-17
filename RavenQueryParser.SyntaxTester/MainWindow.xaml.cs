@@ -68,7 +68,7 @@ namespace RavenQuery.SyntaxTester
         {           
              _textMarkerService.RemoveAll(m => true);
             _errorListener.Reset();
-            var inputStream = new AntlrInputStream(CodeEditor.Text);
+            var inputStream = new CaseInsensitiveInputStream(CodeEditor.Text);
             _lexer.SetInputStream(inputStream);
             _parser.SetInputStream(new CommonTokenStream(_lexer));
 
