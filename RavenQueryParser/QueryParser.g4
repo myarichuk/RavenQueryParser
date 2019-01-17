@@ -4,7 +4,7 @@ options { tokenVocab=QueryLexer; }
 
 //note: query and patch are separate to prevent ambiguities
 query: projectionFunction* (documentQuery | graphQuery) EOF;
-patch: FROM querySource loadClause? whereClause? orderByClause? updateClause;
+patch: FROM querySource loadClause? whereClause? updateClause;
 
 //document query
 documentQuery:  FROM querySource loadClause? whereClause? orderByClause? selectClause? includeClause?;
@@ -38,7 +38,12 @@ projectionFunction: DECLARE_FUNCTION functionName = IDENTIFIER OPEN_PAREN (param
                         sourceCode = SOURCE_CODE_CHAR*
                     CLOSE_CPAREN;
 
-loadParam: identifier = IDENTIFIER AS alias = IDENTIFIER;
+loadParamExpression: 
+		     identifier = IDENTIFIER #LoadParamIdentifierExpression
+		   | instance = loadParamExpression DOT field = IDENTIFIER #LoadParamFieldExpression
+		   ;
+
+loadParam: identifier = loadParamExpression AS alias = IDENTIFIER;
 loadClause: LOAD params += loadParam (COMMA params+= loadParam)*;
 
 includeClause: INCLUDE expressionList;
