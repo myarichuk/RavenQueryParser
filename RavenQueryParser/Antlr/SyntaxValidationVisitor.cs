@@ -1,9 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Antlr4.Runtime;
+﻿using System.Collections.Generic;
 
-namespace RavenQueryParser
+namespace RavenQueryParser.Antlr
 {
     public class SyntaxValidationVisitor : QueryParserBaseVisitor<IReadOnlyList<SyntaxError>>
     {

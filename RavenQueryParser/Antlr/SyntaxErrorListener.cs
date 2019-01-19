@@ -4,9 +4,8 @@ using Antlr4.Runtime.Atn;
 using Antlr4.Runtime.Dfa;
 using Antlr4.Runtime.Misc;
 using Antlr4.Runtime.Sharpen;
-using RavenQueryParser;
 
-namespace RavenQuery
+namespace RavenQueryParser.Antlr
 {
     public class SyntaxErrorListener : BaseErrorListener
     {

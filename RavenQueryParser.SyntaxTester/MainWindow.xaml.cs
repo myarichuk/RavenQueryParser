@@ -12,6 +12,7 @@ using ICSharpCode.AvalonEdit.Highlighting;
 using ICSharpCode.AvalonEdit.Highlighting.Xshd;
 using RavenQuery.SyntaxTester.SharpDevelop;
 using RavenQueryParser;
+using RavenQueryParser.Antlr;
 
 namespace RavenQuery.SyntaxTester
 {
@@ -71,7 +72,6 @@ namespace RavenQuery.SyntaxTester
             var inputStream = new CaseInsensitiveInputStream(CodeEditor.Text);
             _lexer.SetInputStream(inputStream);
             _parser.SetInputStream(new CommonTokenStream(_lexer));
-
             _parser.query();
 
             var errors = _errorListener.SyntaxErrors.Aggregate(new StringBuilder(), (sb, err) => 

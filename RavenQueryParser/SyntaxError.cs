@@ -21,6 +21,6 @@ namespace RavenQueryParser
         public string Message { get; }
         public RecognitionException RecognitionException { get; }
 
-        public override string ToString() => $"{Message}, {nameof(Line)}: {Line}, Character Position: {CharPositionInLine}, Offending Symbol: {OffendingSymbol.Text}";
+        public override string ToString() => $"{Message}, {nameof(Line)}: {Line}, Column: {CharPositionInLine}";
     }    
 }

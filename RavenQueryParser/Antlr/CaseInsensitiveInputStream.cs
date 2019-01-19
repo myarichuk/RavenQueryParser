@@ -1,6 +1,6 @@
 ﻿using Antlr4.Runtime;
 
-namespace RavenQueryParser
+namespace RavenQueryParser.Antlr
 {
     //credit: https://gist.github.com/sharwell/9424666
     public class CaseInsensitiveInputStream : AntlrInputStream
