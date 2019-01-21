@@ -1,4 +1,5 @@
-﻿using Antlr4.Runtime;
+﻿using System.Linq;
+using Antlr4.Runtime;
 using Castle.MicroKernel.Registration;
 using Castle.Windsor;
 using RavenQueryParser.ErrorHandlers.InputMismatchHandlers;
@@ -8,14 +9,14 @@ namespace RavenQueryParser
 {
     public class UserFriendlyErrorStrategy : DefaultErrorStrategy
     {
-        private static readonly WindsorContainer _container = new WindsorContainer();
+        private static readonly WindsorContainer Container = new WindsorContainer();
 
         private readonly IInputMismatchHandler[] _inputMismatchErrorHandlers;
         private readonly IUnwantedTokenHandler[] _unwantedTokenHandlers;
 
         static UserFriendlyErrorStrategy()
         {
-            _container.Register(
+            Container.Register(
                 Classes.FromAssemblyContaining<UserFriendlyErrorStrategy>()
                     .BasedOn<IInputMismatchHandler>()
                     .LifestyleSingleton()
@@ -29,8 +30,8 @@ namespace RavenQueryParser
 
         public UserFriendlyErrorStrategy()
         {
-            _inputMismatchErrorHandlers = _container.ResolveAll<IInputMismatchHandler>();
-            _unwantedTokenHandlers = _container.ResolveAll<IUnwantedTokenHandler>();
+            _inputMismatchErrorHandlers = Container.ResolveAll<IInputMismatchHandler>();
+            _unwantedTokenHandlers = Container.ResolveAll<IUnwantedTokenHandler>();
         }
 
         protected override void ReportMissingToken(Parser recognizer)
@@ -77,6 +78,9 @@ namespace RavenQueryParser
 
         protected override void ReportInputMismatch(Parser recognizer, InputMismatchException e)
         {
+            var suggester = new TokenSuggester(recognizer);
+            suggester.Suggest(e.OffendingToken.TokenIndex);
+
             foreach (var errorHandler in _inputMismatchErrorHandlers)
             {
                 if (errorHandler.ShouldHandle(recognizer, e))
