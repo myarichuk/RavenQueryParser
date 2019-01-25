@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Antlr4.Runtime;
 using RavenQueryParser.Antlr;
@@ -18,6 +19,7 @@ namespace RavenQueryParser.Tests
 
             Assert.NotEmpty(suggester.Suggest(0)); //sanity check
             var tokenNames = suggester.Suggestions.Select(type => lexer.Vocabulary.GetSymbolicName(type)).ToArray();
+            Assert.Equal(4, suggester.Suggestions.Count);
             Assert.Contains("MATCH", tokenNames);
             Assert.Contains("FROM", tokenNames);
             Assert.Contains("WITH", tokenNames);
@@ -34,7 +36,9 @@ namespace RavenQueryParser.Tests
 
             Assert.NotEmpty(suggester.Suggest(1)); //sanity check
             var tokenNames = suggester.Suggestions.Select(type => lexer.Vocabulary.GetSymbolicName(type)).ToArray();
+            Assert.Equal(3, suggester.Suggestions.Count);
             Assert.Contains("IDENTIFIER", tokenNames);
+            Assert.Contains("STRING", tokenNames);
             Assert.Contains("INDEX", tokenNames);
             Assert.Contains("ALL_DOCS", tokenNames);
         }

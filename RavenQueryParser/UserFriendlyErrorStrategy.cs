@@ -1,64 +1,19 @@
-﻿using System.Linq;
-using Antlr4.Runtime;
-using Castle.MicroKernel.Registration;
-using Castle.Windsor;
-using RavenQueryParser.ErrorHandlers.InputMismatchHandlers;
-using RavenQueryParser.ErrorHandlers.UnwantedTokenHandlers;
+﻿using Antlr4.Runtime;
 
 namespace RavenQueryParser
 {
     public class UserFriendlyErrorStrategy : DefaultErrorStrategy
     {
-        private static readonly WindsorContainer Container = new WindsorContainer();
-
-        private readonly IInputMismatchHandler[] _inputMismatchErrorHandlers;
-        private readonly IUnwantedTokenHandler[] _unwantedTokenHandlers;
-
-        static UserFriendlyErrorStrategy()
-        {
-            Container.Register(
-                Classes.FromAssemblyContaining<UserFriendlyErrorStrategy>()
-                    .BasedOn<IInputMismatchHandler>()
-                    .LifestyleSingleton()
-                    .WithServiceAllInterfaces(),
-                Classes.FromAssemblyContaining<UserFriendlyErrorStrategy>()
-                    .BasedOn<IUnwantedTokenHandler>()
-                    .LifestyleSingleton()
-                    .WithServiceAllInterfaces()
-                );
-        }
-
-        public UserFriendlyErrorStrategy()
-        {
-            _inputMismatchErrorHandlers = Container.ResolveAll<IInputMismatchHandler>();
-            _unwantedTokenHandlers = Container.ResolveAll<IUnwantedTokenHandler>();
-        }
-
         protected override void ReportMissingToken(Parser recognizer)
         {
             var currentToken = recognizer.CurrentToken;
             var msg = "missing " + GetExpectedTokens(recognizer).ToString(recognizer.Vocabulary) + " at " + GetTokenErrorDisplay(currentToken);
             
-            var previousTokenType = recognizer.InputStream.La(-1);
-            if (previousTokenType == QueryLexer.INDEX)
-            {
-                msg = "Missing index name after 'from index'. Note that index name is a string";
-            }
-
             recognizer.NotifyErrorListeners(currentToken, msg, null);
         }
 
         protected override void ReportUnwantedToken(Parser recognizer)
-        {
-            foreach (var errorHandler in _unwantedTokenHandlers)
-            {
-                if (errorHandler.ShouldHandle(recognizer))
-                {
-                    errorHandler.Handle(recognizer);
-                    return;
-                }
-            }
-
+        {                   
             //bit more user-friendly "catch all" error
             if (recognizer.InputStream.La(2) == QueryLexer.Eof) //next token type
             {
@@ -71,26 +26,16 @@ namespace RavenQueryParser
             }
         }
 
-        protected override void ReportNoViableAlternative(Parser recognizer, NoViableAltException e)
+        protected override void ReportFailedPredicate(Parser recognizer, FailedPredicateException e)
         {
-            base.ReportNoViableAlternative(recognizer, e);
+            NotifyErrorListeners(recognizer, e.Message, (RecognitionException) e);
         }
 
-        protected override void ReportInputMismatch(Parser recognizer, InputMismatchException e)
+        public override void Recover(Parser recognizer, RecognitionException e)
         {
-            var suggester = new TokenSuggester(recognizer);
-            suggester.Suggest(e.OffendingToken.TokenIndex);
-
-            foreach (var errorHandler in _inputMismatchErrorHandlers)
-            {
-                if (errorHandler.ShouldHandle(recognizer, e))
-                {
-                    errorHandler.Handle(recognizer,e);
-                    return;
-                }
-            }
-
-            base.ReportInputMismatch(recognizer,e);
+            //do not "skip" existing errors, report and continue, perhaps we have more than one error?
+            base.ReportError(recognizer, e); 
+            base.Recover(recognizer, e);
         }
     }
 }

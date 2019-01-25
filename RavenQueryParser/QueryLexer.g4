@@ -1,13 +1,33 @@
 lexer grammar QueryLexer;
 
+@members{
+	
+[System.Flags]
+public enum LexerState
+{
+	DefaultMode = 0,
+	FunctionMode = 1,
+	GraphMode = 2,
+	FunctionImplementationMode = 4
+}
+
+public LexerState CurrentState;
+
+public IToken CurrentToken;
+
+internal void SetStateFlag(LexerState flag) => CurrentState |= flag;
+internal void UnsetStateFlag(LexerState flag) => CurrentState &= ~flag;
+
+}
+
 channels { COMMENT, ERROR, WHITESPACE }
 
 //query entry points
 FROM: 'from';
-MATCH: 'match' -> mode(Graph);
+MATCH: 'match' { UnsetStateFlag(LexerState.DefaultMode); SetStateFlag(LexerState.GraphMode); } -> mode(Graph);
  
 //keywords
-DECLARE_FUNCTION: 'declare function' -> mode(Function);
+DECLARE_FUNCTION: 'declare function' { UnsetStateFlag(LexerState.DefaultMode); SetStateFlag(LexerState.FunctionMode); } -> mode(Function);
 WHERE : 'where';
 BETWEEN: 'between';
 INCLUDE: 'include';
@@ -19,13 +39,13 @@ AS: 'as';
 DESC: 'desc'; //for orderby clauses
 EDGES: 'edges';
 ALL_DOCS: '@all_docs';
-UPDATE: 'update' -> mode(FunctionImplementation);
+UPDATE: 'update' { UnsetStateFlag(LexerState.DefaultMode); SetStateFlag(LexerState.FunctionImplementationMode); } -> mode(FunctionImplementation);
 WITH: 'with';
 AND: 'and';
 OR: 'or';
 NOT: 'not';
 
-IN: 'int';
+IN: 'in';
 ALL_IN: 'all in';
 
 DOT: '.';
@@ -130,7 +150,13 @@ FUNCTION_NAME: (LETTER | '_') (LETTER | DIGIT | '_')* -> type(IDENTIFIER);
 FUNCTION_OPEN_PAREN: '(' -> type(OPEN_PAREN);
 FUNCTION_CLOSE_PAREN: ')' -> type(CLOSE_PAREN);
 
-FUNCTION_OPEN_CPAREN: '{' -> type(OPEN_CPAREN), mode(FunctionImplementation);
+FUNCTION_OPEN_CPAREN: '{' 
+{
+SetStateFlag(LexerState.FunctionImplementationMode); 
+UnsetStateFlag(LexerState.FunctionMode); 
+}
+-> type(OPEN_CPAREN), mode(FunctionImplementation) ;
+
 FUNCTION_COMMA: ',' -> type(COMMA);
 
 FUNCTION_BLOCK_COMMENT: '/*' .+? '*/' -> channel(COMMENT),type(BLOCK_COMMENT);
@@ -139,6 +165,12 @@ FUNCTION_LINE_COMMENT: '//' ~[\r\n]* ('\r'? '\n' | EOF) -> channel(COMMENT),type
 mode FunctionImplementation;
 
 FUNCTION_IMPL_OPEN_CPAREN: '{' -> type(OPEN_CPAREN);
-FUNCTION_IMPL_CLOSE_CPAREN: '}' -> mode(DEFAULT_MODE), type(CLOSE_CPAREN);
+FUNCTION_IMPL_CLOSE_CPAREN: '}' 
+{
+SetStateFlag(LexerState.DefaultMode); 
+UnsetStateFlag(LexerState.FunctionImplementationMode); 
+}
+-> mode(DEFAULT_MODE), type(CLOSE_CPAREN);
+
 SOURCE_CODE_CHAR: . -> more;
 
