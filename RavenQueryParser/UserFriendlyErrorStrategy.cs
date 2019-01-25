@@ -26,6 +26,12 @@ namespace RavenQueryParser
             }
         }
 
+        protected override void ReportNoViableAlternative(Parser recognizer, NoViableAltException e)
+        {
+            var expectedTokens = GetExpectedTokens(recognizer).ToString(recognizer.Vocabulary);
+            NotifyErrorListeners(recognizer,$"Found unexpected token '{e.OffendingToken.Text}' and doesn't know how to continue.", e);
+        }
+
         protected override void ReportFailedPredicate(Parser recognizer, FailedPredicateException e)
         {
             NotifyErrorListeners(recognizer, e.Message, (RecognitionException) e);

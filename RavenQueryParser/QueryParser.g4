@@ -4,7 +4,9 @@ options { tokenVocab=QueryLexer; }
 
 //note: query and patch are separate to prevent ambiguities
 query: projectionFunctionClause* (documentQuery | graphQuery) EOF;
-patch: FROM querySourceClause loadClause? whereClause? updateClause;
+patch: FROM querySourceClause loadClause? whereClause? 
+		{_input.La(1) == QueryLexer.UPDATE }? <fail={"Patch RQL statements must end with an 'update' clause"}>
+		updateClause;
 
 //document query
 documentQuery: FROM { TokensExpectedAfterFromKeyword.Contains(_input.La(1)) }? <fail={"Missing index or collection name after 'from' keyword"}>
@@ -47,15 +49,19 @@ loadParamExpression:
 		   ;
 
 loadParam: identifier = loadParamExpression aliasClause;
-loadClause: LOAD params += loadParam (COMMA params+= loadParam)*;
+loadClause: LOAD params += loadParam (COMMA params+= loadParam)*
+		  | LOAD {false}? <fail={"Missing document ids to load after the 'load' keyword"}>;
 
-includeClause: INCLUDE expressionList;
-whereClause: WHERE conditionExpression;
+includeClause: INCLUDE expressionList | INCLUDE {false}? <fail={"Missing include statement after 'include' keyword"}>;
+whereClause: WHERE conditionExpression | WHERE {false}? <fail={"Missing filter statement after 'where' keyword"}>;
+
 orderByParam: (expression aliasClause? DESC?);
-orderByClause: ORDERBY  orderParams += orderByParam (COMMA orderParams+= orderByParam)*;
+orderByClause: ORDERBY  orderParams += orderByParam (COMMA orderParams+= orderByParam)* 
+			   | ORDERBY {false}? <fail={"Missing ordering statement after the 'order by' keyword"}>;
 
 selectField: expression aliasClause?;
-selectClause: SELECT DISTINCT? fields += selectField (COMMA fields+= selectField)*;
+selectClause: SELECT DISTINCT? fields += selectField (COMMA fields+= selectField)*
+			  | SELECT DISTINCT? {false}? <fail={"Missing fields in 'select' clause"}>;
 
 updateClause: UPDATE {_input.La(1) == QueryLexer.OPEN_CPAREN }? <fail={"Expecting to find '{' after the 'update' keyword"}>
                 OPEN_CPAREN
@@ -92,9 +98,11 @@ conditionExpression:
             |   value = expression ALL_IN 
 					{_input.La(1) == QueryLexer.OPEN_PAREN }? <fail={"Expecting to find '(' after the 'all in' keyword"}> 
 					OPEN_PAREN params += literal (COMMA params+= literal)* CLOSE_PAREN #AllInConditionExpression
-            |   lval = expression op = (GREATER | LESSER | GREATER_EQUALS | LESSER_EQUALS | EQUALS) rVal = expression #ComparisonConditionExpression
+            |   lval = expression 
+					(GREATER | LESSER | GREATER_EQUALS | LESSER_EQUALS | EQUALS | ANY_CHARS {false}? <fail={"Invalid operator '" + _input.Lt(-1).Text + "'. Expected it to be one of: '>', '<', '>=', '<=' or '='"}>) 
+				rVal = expression #ComparisonConditionExpression
             |   OPEN_PAREN conditionExpression CLOSE_PAREN #ParenthesisConditionExpression
             |   functionName = IDENTIFIER OPEN_PAREN expressionList? CLOSE_PAREN #MethodConditionExpression
             |   NOT conditionExpression #NegatedConditionExpression
-            |   lval = conditionExpression op = (AND | OR) rVal = conditionExpression #IntersectionConditionExpression
+            |   lval = conditionExpression (AND | OR | ANY_CHARS {false}? <fail={"Invalid operator '" + _input.Lt(-1).Text + "'. Expected the operator to be 'and' or 'or'"}>) rVal = conditionExpression #IntersectionConditionExpression
             ;

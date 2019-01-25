@@ -92,6 +92,8 @@ AT_SIGN: '@';
 IDENTIFIER: (LETTER | '_' ) (LETTER | DIGIT | '_')*;
 PARAMETER: '$' IDENTIFIER;
 
+ANY_CHARS: ~[ ]+;
+
 mode Graph;
 
 GRAPH_AT_SIGN: '@' -> type(AT_SIGN);
