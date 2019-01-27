@@ -88,21 +88,41 @@ expression:
         |   functionName = IDENTIFIER OPEN_PAREN expressionList? CLOSE_PAREN #MethodExpression
         ;
 
+clauseKeywords:
+	SELECT |
+	WHERE |
+	FROM |
+	INDEX |
+	ORDERBY |
+	BETWEEN |
+	LOAD |
+	INCLUDE |
+	MATCH |
+	WITH |
+	DECLARE |
+	FUNCTION |
+	UPDATE;
+
 conditionExpression:
                 value = expression BETWEEN from = expression AND to = expression #BetweenConditionExpression
 			|	value = expression BETWEEN AND to = expression {false}? <fail={"Missing 'from' expression in 'between' clause"}> #BetweenConditionExpressionMissingFrom
 			|	value = expression BETWEEN from = expression AND {false}? <fail={"Missing 'to' expression in 'between' clause"}> #BetweenConditionExpressionMissingTo
+			|	value = expression BETWEEN {false}? <fail={"Invalid 'between' expression, missing the 'from' and 'to'. The correct syntax would be - 'user.Age between 20 and 30'"}> #BetweenConditionExpressionMissingBothFromAndTo
             |   value = expression IN 
 					{_input.La(1) == QueryLexer.OPEN_PAREN }? <fail={"Expecting to find '(' after the 'in' keyword"}> 
 					OPEN_PAREN params += literal (COMMA params+= literal)* CLOSE_PAREN #InConditionExpression
-            |   value = expression ALL_IN 
+             |   value = expression IN {false}? <fail={"Invalid 'in' expression, missing the comparison. The correct syntax would be - 'user.Age in (20,21,22,23)'"}> #InConditionExpressionMissingComparisonSet
+			 |   value = expression ALL_IN 
 					{_input.La(1) == QueryLexer.OPEN_PAREN }? <fail={"Expecting to find '(' after the 'all in' keyword"}> 
 					OPEN_PAREN params += literal (COMMA params+= literal)* CLOSE_PAREN #AllInConditionExpression
-            |   lval = expression 
-					(GREATER | LESSER | GREATER_EQUALS | LESSER_EQUALS | EQUALS | ANY_CHARS {false}? <fail={"Invalid operator '" + _input.Lt(-1).Text + "'. Expected it to be one of: '>', '<', '>=', '<=' or '='"}>) 
+			|   value = expression ALL_IN {false}? <fail={"Invalid 'all in' expression, missing the comparison. The correct syntax would be - 'user.Age in (20,21,22,23)'"}> #AllInConditionExpressionMissingComparisonSet            |   lval = expression 
+					(GREATER | LESSER | GREATER_EQUALS | LESSER_EQUALS | EQUALS 
+					| ANY_CHARS {false}? <fail={"Invalid operator '" + _input.Lt(-1).Text + "'. Expected it to be one of: '>', '<', '>=', '<=' or '='"}>) 
 				rVal = expression #ComparisonConditionExpression
-            |   OPEN_PAREN conditionExpression CLOSE_PAREN #ParenthesisConditionExpression
+            |   OPEN_PAREN conditionExpression (CLOSE_PAREN | {false}? <fail={"Missing ')'"}>) #ParenthesisConditionExpression
             |   functionName = IDENTIFIER OPEN_PAREN expressionList? CLOSE_PAREN #MethodConditionExpression
             |   NOT conditionExpression #NegatedConditionExpression
             |   lval = conditionExpression (AND | OR | ANY_CHARS {false}? <fail={"Invalid operator '" + _input.Lt(-1).Text + "'. Expected the operator to be 'and' or 'or'"}>) rVal = conditionExpression #IntersectionConditionExpression
+			|	expression expression {false}? <fail={"Missing an operator between '" + _input.Lt(-1).Text + "' and '" + _input.Lt(-2).Text + "'. The following operators are valid: '>', '<', '>=', '<=' or '='"}> #MissingOperatorInConditionExpression
+			|	expression (clauseKeywords | EOF) {false}? <fail={"Condition expression is incomplete. Expected to find here an expression in the form of 'x > 5'"}>#UncompleteConditionExpression
             ;
