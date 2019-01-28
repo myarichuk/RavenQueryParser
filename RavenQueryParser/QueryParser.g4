@@ -4,8 +4,9 @@ options { tokenVocab=QueryLexer; }
 
 //note: query and patch are separate to prevent ambiguities
 query: projectionFunctionClause* (documentQuery | graphQuery) EOF;
-patch: FROM querySourceClause loadClause? whereClause? 		
-		(updateClause | { false }? <fail={"Patch RQL statements must end with an 'update' clause"}>) ;
+patch: FROM querySourceClause loadClause? whereClause? 
+		{_input.La(1) == QueryLexer.UPDATE }? <fail={"Patch RQL statements must end with an 'update' clause"}>
+		updateClause;
 
 //document query
 documentQuery: FROM ((clauseKeywords | EOF) { false }? <fail={"Missing index or collection name after 'from' keyword"}> |
@@ -92,7 +93,6 @@ clauseKeywords:
 	SELECT |
 	WHERE |
 	FROM |
-	INDEX |
 	ORDERBY |
 	BETWEEN |
 	LOAD |
