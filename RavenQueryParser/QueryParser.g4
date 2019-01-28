@@ -4,20 +4,20 @@ options { tokenVocab=QueryLexer; }
 
 //note: query and patch are separate to prevent ambiguities
 query: projectionFunctionClause* (documentQuery | graphQuery) EOF;
-patch: FROM querySourceClause loadClause? whereClause? 
-		{_input.La(1) == QueryLexer.UPDATE }? <fail={"Patch RQL statements must end with an 'update' clause"}>
-		updateClause;
+patch: FROM querySourceClause loadClause? whereClause? 		
+		(updateClause | { false }? <fail={"Patch RQL statements must end with an 'update' clause"}>) ;
 
 //document query
-documentQuery: FROM { TokensExpectedAfterFromKeyword.Contains(_input.La(1)) }? <fail={"Missing index or collection name after 'from' keyword"}>
-				 querySourceClause loadClause? whereClause? orderByClause? selectClause? includeClause?;
+documentQuery: FROM ((clauseKeywords | EOF) { false }? <fail={"Missing index or collection name after 'from' keyword"}> |
+				 querySourceClause loadClause? whereClause? orderByClause? selectClause? includeClause?);
  
 //graph query
-graphQuery: (nodeWithClause | edgeWithClause)* MATCH patternMatchClause whereClause? orderByClause? selectClause?;
+graphQuery: (nodeWithClause | edgeWithClause)* MATCH ((clauseKeywords | EOF) { false }? <fail={"Missing pattern match expression after the 'match' keyword"}> |
+												patternMatchClause whereClause? orderByClause? selectClause?);
 nodeWithClause: WITH OPEN_CPAREN documentQuery CLOSE_CPAREN aliasClause;
 edgeWithClause: WITH EDGES OPEN_PAREN edgeType = IDENTIFIER CLOSE_PAREN OPEN_CPAREN whereClause orderByClause? selectClause? CLOSE_CPAREN aliasClause;
-edge: OPEN_BRACKET field = expression aliasClause? whereClause? (SELECT expression)? CLOSE_BRACKET;
-node: OPEN_PAREN querySourceClause whereClause? CLOSE_PAREN;
+edge: OPEN_BRACKET field = expression aliasClause? whereClause? (SELECT expression)? (CLOSE_BRACKET | EOF? {false}? <fail={"Missing ']'"}>);
+node: OPEN_PAREN querySourceClause whereClause? (CLOSE_PAREN | EOF? {false}? <fail={"Missing ')'"}>);
 
 patternMatchClause:
                 node #PatternMatchSingleNodeExpression
