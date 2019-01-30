@@ -35,13 +35,7 @@ namespace RavenQueryParser
         protected override void ReportFailedPredicate(Parser recognizer, FailedPredicateException e)
         {
             NotifyErrorListeners(recognizer, e.Message, (RecognitionException) e);
-        }
-
-        public override void Recover(Parser recognizer, RecognitionException e)
-        {
-            //do not "skip" existing errors, report and continue, perhaps we have more than one error?
-            base.ReportError(recognizer, e); 
-            base.Recover(recognizer, e);
-        }
+            Recover(recognizer, e);
+        }      
     }
 }

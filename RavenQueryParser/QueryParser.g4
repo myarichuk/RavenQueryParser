@@ -9,16 +9,21 @@ patch: FROM querySourceClause loadClause? whereClause?
 		updateClause;
 
 //document query
-documentQuery: FROM ((clauseKeywords | EOF) { false }? <fail={"Missing index or collection name after 'from' keyword"}> |
-				 querySourceClause loadClause? whereClause? orderByClause? selectClause? includeClause?);
+documentQuery
+  @init {
+	IToken fromToken;
+  }
+  : FROM { fromToken = _input.Lt(-1); }
+		 (loadClause? whereClause? orderByClause? selectClause? includeClause? { NotifyErrorListeners(fromToken,"Missing index or collection name after 'from' keyword", null); } |
+		  querySourceClause loadClause? whereClause? orderByClause? selectClause? includeClause?);
  
 //graph query
-graphQuery: (nodeWithClause | edgeWithClause)* MATCH ((clauseKeywords | EOF) { false }? <fail={"Missing pattern match expression after the 'match' keyword"}> |
+graphQuery: (nodeWithClause | edgeWithClause)* MATCH ((clauseKeywords | EOF) { NotifyErrorListeners(_input.Lt(-1),"Missing pattern match expression after the 'match' keyword",null); } |
 												patternMatchClause whereClause? orderByClause? selectClause?);
 nodeWithClause: WITH OPEN_CPAREN documentQuery CLOSE_CPAREN aliasClause;
 edgeWithClause: WITH EDGES OPEN_PAREN edgeType = IDENTIFIER CLOSE_PAREN OPEN_CPAREN whereClause orderByClause? selectClause? CLOSE_CPAREN aliasClause;
-edge: OPEN_BRACKET field = expression aliasClause? whereClause? (SELECT expression)? (CLOSE_BRACKET | EOF? {false}? <fail={"Missing ']'"}>);
-node: OPEN_PAREN querySourceClause whereClause? (CLOSE_PAREN | EOF? {false}? <fail={"Missing ')'"}>);
+edge: OPEN_BRACKET field = expression aliasClause? whereClause? (SELECT expression)? (CLOSE_BRACKET | EOF? { NotifyErrorListeners("Missing ']'"); });
+node: OPEN_PAREN querySourceClause whereClause? (CLOSE_PAREN | EOF? { NotifyErrorListeners("Missing ')'"); });
 
 patternMatchClause:
                 node #PatternMatchSingleNodeExpression
@@ -29,14 +34,17 @@ patternMatchClause:
             |   OPEN_PAREN patternMatchClause CLOSE_PAREN #PatternMatchParenthesisExpression
             ;
 
-aliasClause: AS {_input.La(1) == QueryLexer.IDENTIFIER }? <fail={"Expecting identifier after 'as' keyword"}> alias = IDENTIFIER; 
+aliasClause: AS alias = IDENTIFIER | 
+			 AS { NotifyErrorListeners(_input.Lt(-1),"Expecting identifier after 'as' keyword", null); }
+			;
 
 //shared clauses/expressions
 querySourceClause: 
 	  ALL_DOCS aliasClause? #AllDocsSource
 	| (collection = IDENTIFIER | collectionAsString = STRING) aliasClause? #CollectionSource
-	| INDEX {_input.La(1) == QueryLexer.STRING }? <fail={"Expecting index name as quoted string after the 'index' keyword"}>
-	  indexName = STRING aliasClause? #IndexSource
+	| INDEX indexName = STRING aliasClause? #IndexSource
+	| INDEX aliasClause? { NotifyErrorListeners(_input.Lt(-1),"Expecting index name as quoted string after the 'index' keyword",null); } #IndexSourceMissingIndexName
+	| aliasClause { NotifyErrorListeners(_input.Lt(-1), "Found alias clause but didn't find a query source definition. Before the alias clause, expected to find either a collection name, '@all_docs' keyword or 'index <index name>'",null); } #InvalidQuerySource
 	;
 
 projectionFunctionClause: DECLARE_FUNCTION functionName = IDENTIFIER OPEN_PAREN (params += IDENTIFIER (COMMA params+= IDENTIFIER)*)? CLOSE_PAREN
@@ -51,18 +59,18 @@ loadParamExpression:
 
 loadParam: identifier = loadParamExpression aliasClause;
 loadClause: LOAD params += loadParam (COMMA params+= loadParam)*
-		  | LOAD {false}? <fail={"Missing document ids to load after the 'load' keyword"}>;
+		  | LOAD { NotifyErrorListeners(_input.Lt(-1),"Missing document ids to load after the 'load' keyword",null); };
 
-includeClause: INCLUDE expressionList | INCLUDE {false}? <fail={"Missing include statement after 'include' keyword"}>;
-whereClause: WHERE conditionExpression | WHERE {false}? <fail={"Missing filter statement after 'where' keyword"}>;
+includeClause: INCLUDE expressionList | INCLUDE { NotifyErrorListeners(_input.Lt(-1),"Missing include statement after 'include' keyword",null); };
+whereClause: WHERE conditionExpression | WHERE { NotifyErrorListeners(_input.Lt(-1),"Missing filter statement after 'where' keyword",null); };
 
 orderByParam: (expression aliasClause? DESC?);
 orderByClause: ORDERBY  orderParams += orderByParam (COMMA orderParams+= orderByParam)* 
-			   | ORDERBY {false}? <fail={"Missing ordering statement after the 'order by' keyword"}>;
+			   | ORDERBY { NotifyErrorListeners(_input.Lt(-1), "Missing ordering statement after the 'order by' keyword",null); };
 
 selectField: expression aliasClause?;
 selectClause: SELECT DISTINCT? fields += selectField (COMMA fields+= selectField)*
-			  | SELECT DISTINCT? {false}? <fail={"Missing fields in 'select' clause"}>;
+			  | SELECT DISTINCT? { NotifyErrorListeners(_input.Lt(-1), "Missing fields in 'select' clause",null); };
 
 updateClause: UPDATE {_input.La(1) == QueryLexer.OPEN_CPAREN }? <fail={"Expecting to find '{' after the 'update' keyword"}>
                 OPEN_CPAREN
