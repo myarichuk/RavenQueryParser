@@ -74,7 +74,7 @@ namespace RavenQuery.SyntaxTester
             _parser.SetInputStream(new CommonTokenStream(_lexer));
             _parser.query();
 
-            var errors = _errorListener.SyntaxErrors.Aggregate(new StringBuilder(), (sb, err) => 
+            var errors = _errorListener.Errors.Aggregate(new StringBuilder(), (sb, err) => 
                 sb.AppendLine(err.ToString().Replace("\\n"," ")
                                             .Replace("\\r"," ")
                                             .Replace("\\t"," "))).ToString();
@@ -84,7 +84,7 @@ namespace RavenQuery.SyntaxTester
 
         private void AddSquigglies()
         {
-            foreach (var error in _errorListener.SyntaxErrors)
+            foreach (var error in _errorListener.Errors)
             {                
                 var lineOffset = CodeEditor.Document.Lines[Math.Max(0,error.Line - 1)].Offset;
                 var length = error.OffendingSymbol.Text == "<EOF>" ? 0 : error.OffendingSymbol.Text.Length;
