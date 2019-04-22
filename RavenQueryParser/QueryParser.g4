@@ -4,16 +4,12 @@ options { tokenVocab=QueryLexer; }
 
 //note: query and patch are separate to prevent ambiguities
 query: projectionFunctionClause* (documentQuery | graphQuery) EOF;
-patch
-@init {
-	IToken fromToken = null;
-  }
-    : 
-       FROM { fromToken = _input.Lt(-1); } 
-       (querySourceClause loadClause? whereClause? ( updateClause | { NotifyErrorListeners(_input.Lt(-1),"Patch queries must contain 'update' clause.",null); }))
-       |
-	   (loadClause? whereClause? ( updateClause | { NotifyErrorListeners(_input.Lt(-1),"Patch queries must contain 'update' clause.",null); }) { NotifyErrorListeners(fromToken,"Missing index or collection name after 'from' keyword", null); }) 
-	    EOF;
+patch: 
+	   FROM
+	   (querySourceClause | { NotifyErrorListeners(_input.Lt(-1),"Missing index or collection name after 'from' keyword", null); }) 
+	   loadClause? whereClause? 
+	   ( updateClause | { NotifyErrorListeners(_input.Lt(-1),"Patch queries must contain 'update' clause.",null); })        
+	   EOF;
 
 //document query
 documentQuery
@@ -42,8 +38,10 @@ patternMatchClause:
 			|   OPEN_PAREN patternMatchClause CLOSE_PAREN #PatternMatchParenthesisExpression
 			;
 
-aliasClause: AS alias = IDENTIFIER | 
+aliasClause: AS alias = IDENTIFIER 
+            | 
 			 AS { NotifyErrorListeners(_input.Lt(-1),"Expecting identifier (alias) after 'as' keyword", null); }
+			|  alias = IDENTIFIER { NotifyErrorListeners(_input.Lt(-1),"Missing 'as' keyword", null); }
 			;
 
 //shared clauses/expressions
@@ -62,7 +60,7 @@ projectionFunctionClause:
 			(OPEN_PAREN | { NotifyErrorListeners(_input.Lt(-1),"Missing '('", null); })
 				(params += IDENTIFIER ((COMMA | { NotifyErrorListeners(_input.Lt(-1),"Missing ','", null); }) params+= IDENTIFIER)*)? 
 			(CLOSE_PAREN | { NotifyErrorListeners(_input.Lt(-1),"Missing ')'", null); })
-                    javascriptBlock
+					javascriptBlock
 					;
 
 javascriptBlock:
@@ -94,7 +92,7 @@ identifierToLoad:
 	;	 
  
 loadClause:			
-		  	LOAD params += identifierToLoad ((COMMA | { NotifyErrorListeners(_input.Lt(-1),"Missing ','", null); }) params+= identifierToLoad)*
+			LOAD params += identifierToLoad ((COMMA | { NotifyErrorListeners(_input.Lt(-1),"Missing ','", null); }) params+= identifierToLoad)*
 		  | LOAD { NotifyErrorListeners(_input.Lt(-1),"Expected to find document id but found ',' instead",null); } ((COMMA | { NotifyErrorListeners(_input.Lt(-1),"Missing ','", null); }) params+= identifierToLoad)+
 		  | LOAD { NotifyErrorListeners(_input.Lt(-1),"Missing one or more document id(s) to load after the 'load' keyword",null); };
    

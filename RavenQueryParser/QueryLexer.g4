@@ -39,7 +39,7 @@ AS: 'as';
 DESC: 'desc'; //for orderby clauses
 EDGES: 'edges';
 ALL_DOCS: '@all_docs';
-UPDATE: 'update' { UnsetStateFlag(LexerState.DefaultMode); SetStateFlag(LexerState.FunctionImplementationMode); } -> mode(JavaScript);
+UPDATE: 'update';
 WITH: 'with';
 AND: 'and';
 OR: 'or';

@@ -11,7 +11,22 @@ namespace RavenQueryParser.Tests
         private SyntaxErrorListener _errorListener = new SyntaxErrorListener ();
 
         [Fact]
-        public void Error_on_empty_from()
+        public void Error_on_empty_from_patch()
+        {
+            var parser = new QueryParser(new CommonTokenStream(new QueryLexer(new AntlrInputStream("from update {}"))));
+            parser.AddErrorListener(_errorListener);
+            parser.patch();
+            Assert.Single(_errorListener.Errors);
+            Assert.Contains("index or collection name", _errorListener.Errors[0].Message);
+
+            _errorListener = new SyntaxErrorListener();
+            parser = new QueryParser(new CommonTokenStream(new QueryLexer(new AntlrInputStream("from foobar update {}"))));
+            parser.patch();
+            Assert.Empty(_errorListener.Errors);
+        }
+        
+        [Fact]
+        public void Error_on_empty_from_query()
         {
             var parser = new QueryParser(new CommonTokenStream(new QueryLexer(new AntlrInputStream("from"))));
             parser.AddErrorListener(_errorListener);
@@ -214,6 +229,20 @@ namespace RavenQueryParser.Tests
             parser.loadClause();
             Assert.Single(_errorListener.Errors);
             Assert.Contains("document id", _errorListener.Errors[0].Message);
+        }
+        
+        [Fact]
+        public void Should_throw_on_load_missing_as_keyword()
+        {
+            var parser =
+                new QueryParser(
+                    new CommonTokenStream(
+                        new QueryLexer(new AntlrInputStream("load foo x"))));
+
+            parser.AddErrorListener(_errorListener);
+            parser.loadClause();
+            Assert.Single(_errorListener.Errors);
+            Assert.Contains("'as'", _errorListener.Errors[0].Message);
         }
         
         [Fact]
