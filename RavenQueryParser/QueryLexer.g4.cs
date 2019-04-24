@@ -8,12 +8,6 @@ namespace RavenQueryParser
         {
             NotifyListeners(e);
             base.Recover(e);
-        }
-
-        public override IToken NextToken()
-        {
-            CurrentToken = base.NextToken();
-            return CurrentToken;
-        }
+        }      
     }
 }

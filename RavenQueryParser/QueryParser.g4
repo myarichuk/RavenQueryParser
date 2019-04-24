@@ -8,7 +8,7 @@ patch:
 	   FROM
 	   (querySourceClause | { NotifyErrorListeners(_input.Lt(-1),"Missing index or collection name after 'from' keyword", null); }) 
 	   loadClause? whereClause? 
-	   ( updateClause | { NotifyErrorListeners(_input.Lt(-1),"Patch queries must contain 'update' clause.",null); })        
+	   ( UPDATE javascriptBlock | { NotifyErrorListeners(_input.Lt(-1),"Patch queries must contain 'update' clause.",null); })        
 	   EOF;
 
 //document query
@@ -22,8 +22,17 @@ documentQuery
 		 loadClause? whereClause? orderByClause? selectClause? includeClause? { NotifyErrorListeners(fromToken,"Missing index or collection name after 'from' keyword", null); });
  
 //graph query
-graphQuery: (nodeWithClause | edgeWithClause)* MATCH ((clauseKeywords | EOF) { NotifyErrorListeners(_input.Lt(-1),"Missing pattern match expression after the 'match' keyword",null); } |
-												patternMatchClause whereClause? orderByClause? selectClause?);
+graphQuery
+ @init {
+	IToken matchToken;
+  }
+        : (nodeWithClause | edgeWithClause)*
+            MATCH { matchToken = _input.Lt(-1); } (
+            (
+            clauseKeywords | EOF) { NotifyErrorListeners(matchToken,"Missing pattern match expression after the 'match' keyword",null); } 
+            |
+			patternMatchClause whereClause? orderByClause? selectClause?
+			);
 nodeWithClause: WITH OPEN_CPAREN documentQuery CLOSE_CPAREN aliasClause;
 edgeWithClause: WITH EDGES OPEN_PAREN edgeType = IDENTIFIER CLOSE_PAREN OPEN_CPAREN whereClause orderByClause? selectClause? CLOSE_CPAREN aliasClause;
 edge: OPEN_BRACKET field = expression aliasClause? whereClause? (SELECT expression)? (CLOSE_BRACKET | EOF? { NotifyErrorListeners("Missing ']'"); });
@@ -39,7 +48,7 @@ patternMatchClause:
 			;
 
 aliasClause: AS alias = IDENTIFIER 
-            | 
+			| 
 			 AS { NotifyErrorListeners(_input.Lt(-1),"Expecting identifier (alias) after 'as' keyword", null); }
 			|  alias = IDENTIFIER { NotifyErrorListeners(_input.Lt(-1),"Missing 'as' keyword", null); }
 			;
@@ -106,8 +115,6 @@ orderByClause: ORDERBY  orderParams += orderByParam ((COMMA | { NotifyErrorListe
 selectField: expression aliasClause?;
 selectClause: SELECT DISTINCT? fields += selectField ((COMMA | { NotifyErrorListeners(_input.Lt(-1),"Missing ','", null); }) fields+= selectField)*
 			  | SELECT DISTINCT? { NotifyErrorListeners(_input.Lt(-1), "Missing fields in 'select' clause",null); };
-
-updateClause: UPDATE javascriptBlock;
  
 //expressions
 queryLiteral:
@@ -134,41 +141,70 @@ clauseKeywords:
 	WHERE |
 	FROM |
 	ORDERBY |
-	BETWEEN |
 	LOAD |
 	INCLUDE |
 	MATCH |
 	WITH |
-	DECLARE |
-	FUNCTION |
 	UPDATE;
-
-conditionExpression:
+	
+conditionExpression
+ @init {
+	IToken problematicToken;
+  }
+            :
 				value = expression BETWEEN from = expression AND to = expression #BetweenConditionExpression
-			|	value = expression BETWEEN AND to = expression {false}? <fail={"Missing 'from' expression in 'between' clause"}> #BetweenConditionExpressionMissingFrom
-			|	value = expression BETWEEN from = expression AND {false}? <fail={"Missing 'to' expression in 'between' clause"}> #BetweenConditionExpressionMissingTo
-			|	value = expression BETWEEN {false}? <fail={"Invalid 'between' expression, missing the 'from' and 'to'. The correct syntax would be - 'user.Age between 20 and 30'"}> #BetweenConditionExpressionMissingBothFromAndTo
-			|   value = expression IN 
-					{_input.La(1) == QueryLexer.OPEN_PAREN }? <fail={"Expecting to find '(' after the 'in' keyword"}> 
-					OPEN_PAREN params += literal (COMMA params+= literal)* CLOSE_PAREN #InConditionExpression
-			 |   value = expression IN {false}? <fail={"Invalid 'in' expression, missing the comparison. The correct syntax would be - 'user.Age in (20,21,22,23)'"}> #InConditionExpressionMissingComparisonSet
-			 |   value = expression ALL_IN 
-					{_input.La(1) == QueryLexer.OPEN_PAREN }? <fail={"Expecting to find '(' after the 'all in' keyword"}> 
-					OPEN_PAREN params += literal (COMMA params+= literal)* CLOSE_PAREN #AllInConditionExpression
-			|   value = expression ALL_IN {false}? <fail={"Invalid 'all in' expression, missing the comparison. The correct syntax would be - 'user.Age in (20,21,22,23)'"}> #AllInConditionExpressionMissingComparisonSet            |   lval = expression 
+			|	value = expression BETWEEN { problematicToken = _input.Lt(-1); } AND to = expression { NotifyErrorListeners(problematicToken, "Missing 'from' expression in 'between' clause",null); } #BetweenConditionExpressionMissingFrom
+			|	value = expression BETWEEN from = expression AND? { NotifyErrorListeners(_input.Lt(-1), "Missing 'to' expression in 'between' clause",null); } #BetweenConditionExpressionMissingTo
+			|	value = expression BETWEEN from = expression { problematicToken = _input.Lt(-1); } to = expression { NotifyErrorListeners(problematicToken, "Missing 'and' keyword between the two limits of the clause",null); } #BetweenConditionExpressionMissingAnd
+			|	value = expression BETWEEN { NotifyErrorListeners(_input.Lt(-1), "Invalid 'between' expression, missing the 'from' and 'to'. The correct syntax would be - 'user.Age between 20 and 30'",null); } #BetweenConditionExpressionMissingBothFromAndTo
+			
+			|   value = expression IN  
+					queryLiteralList #InConditionExpression
+			|   value = expression ALL_IN 					 
+					queryLiteralList #AllInConditionExpression
+			|   value = expression { problematicToken = _input.Lt(-1); }  queryLiteralList { NotifyErrorListeners(_input.Lt(-1),"Invalid 'in' or 'all in' expression, missing the keyword. The correct syntax would be - 'user.Age in (20,21,22,23)'",null); } #InConditionExpressionWithoutKeyword					
+										
+			|   value = expression ALL_IN {NotifyErrorListeners(_input.Lt(-1),"Invalid 'all in' expression, missing the comparison. The correct syntax would be - 'user.Age in (20,21,22,23)'", null); } #AllInConditionExpressionMissingComparisonSet            
+			|   lval = expression 
 					(GREATER | LESSER | GREATER_EQUALS | LESSER_EQUALS | EQUALS 
-					| ANY_CHARS {false}? <fail={"Invalid operator '" + _input.Lt(-1).Text + "'. Expected it to be one of: '>', '<', '>=', '<=' or '='"}>) 
+					| {NotifyErrorListeners(_input.Lt(-1),"Invalid operator '" + _input.Lt(-1).Text + "'. Expected it to be one of: '>', '<', '>=', '<=' or '='", null); })
 				rVal = expression #ComparisonConditionExpression
-			|   OPEN_PAREN conditionExpression (CLOSE_PAREN | {false}? <fail={"Missing ')'"}>) #ParenthesisConditionExpression
+				
+			|   OPEN_PAREN conditionExpression (CLOSE_PAREN | { NotifyErrorListeners(_input.Lt(-1),"Missing ')'", null); }) #ParenthesisConditionExpression
 			|   functionName = IDENTIFIER OPEN_PAREN expressionList? CLOSE_PAREN #MethodConditionExpression
 			|   NOT conditionExpression #NegatedConditionExpression
-			|   lval = conditionExpression (AND | OR | ANY_CHARS {false}? <fail={"Invalid operator '" + _input.Lt(-1).Text + "'. Expected the operator to be 'and' or 'or'"}>) rVal = conditionExpression #IntersectionConditionExpression
-			|	expression expression {false}? <fail={"Missing an operator between '" + _input.Lt(-1).Text + "' and '" + _input.Lt(-2).Text + "'. The following operators are valid: '>', '<', '>=', '<=' or '='"}> #MissingOperatorInConditionExpression
-			|	expression (clauseKeywords | EOF) {false}? <fail={"Condition expression is incomplete. Expected to find here an expression in the form of 'x > 5'"}>#UncompleteConditionExpression
+			|   lval = conditionExpression (AND | OR | { NotifyErrorListeners(_input.Lt(-1),"Invalid operator '" + _input.Lt(-1).Text + "'. Expected the operator to be either 'and' or 'or'", null); }) rVal = conditionExpression #IntersectionConditionExpression
+			|	expression expression { NotifyErrorListeners(_input.Lt(-1),"Missing an operator between '" + _input.Lt(-1).Text + "' and '" + _input.Lt(-2).Text + "'. The following operators are valid: '>', '<', '>=', '<=' or '='", null); } #MissingOperatorInConditionExpression
+			//|	expression (clauseKeywords | EOF) { NotifyErrorListeners(_input.Lt(-1),"Condition expression is incomplete. Expected to find here an expression in the form of 'x > 5'", null); } #UncompleteConditionExpression
 			;
 
-
-
+queryLiteralList: 
+    OPEN_PAREN 
+        params += queryLiteral ((COMMA | { NotifyErrorListeners(_input.Lt(-1),"Missing ','", null); }) params+= queryLiteral)* 
+    CLOSE_PAREN
+    |
+    { NotifyErrorListeners(_input.Lt(-1),"Missing '('", null); }
+        params += queryLiteral ((COMMA | { NotifyErrorListeners(_input.Lt(-1),"Missing ','", null); }) params+= queryLiteral)* 
+    CLOSE_PAREN
+    |
+    OPEN_PAREN
+        params += queryLiteral ((COMMA | { NotifyErrorListeners(_input.Lt(-1),"Missing ','", null); }) params+= queryLiteral)* 
+    { NotifyErrorListeners(_input.Lt(-1),"Missing ')'", null); }
+    |
+    { NotifyErrorListeners(_input.Lt(-1),"Missing '('", null); }
+        params += queryLiteral ((COMMA | { NotifyErrorListeners(_input.Lt(-1),"Missing ','", null); }) params+= queryLiteral)* 
+    { NotifyErrorListeners(_input.Lt(-1),"Missing ')'", null); }          
+    ;
+    
+queryCommaDelimitedLiteralList
+ @init {
+	IToken problematicToken;
+  }    
+    :
+        params += queryLiteral ((COMMA | { NotifyErrorListeners(_input.Lt(-1),"Missing ','", null); }) params+= queryLiteral)*
+    |   ((COMMA | { NotifyErrorListeners(_input.Lt(-1),"Missing ','", null); }) params+= queryLiteral)+
+    
+    ;     
 
 // JavaScript parser rules for parsing projection function
 /*
@@ -438,8 +474,8 @@ expressionSequence
 singleExpression
 	: Function Identifier? OpenParen formalParameterList? CloseParen OpenBrace functionBody CloseBrace # FunctionExpression
 	| Class Identifier? classTail                                            # ClassExpression
-	| singleExpression OpenBracket expressionSequence CloseBracket                            # MemberIndexExpression
-	| singleExpression Dot identifierName                                    # MemberDotExpression
+	| singleExpression OpenBracket expressionSequence CloseBracket                            # JavascriptMemberIndexExpression
+	| singleExpression Dot identifierName                                    # JavascriptMemberDotExpression
 	| singleExpression arguments                                             # ArgumentsExpression
 	| New singleExpression arguments?                                        # NewExpression
 	| singleExpression {this.notLineTerminator()}? PlusPlus                      # PostIncrementExpression
@@ -451,31 +487,31 @@ singleExpression
 	| MinusMinus singleExpression                                                  # PreDecreaseExpression
 	| Plus singleExpression                                                   # UnaryPlusExpression
 	| Minus singleExpression                                                   # UnaryMinusExpression
-	| BitNot singleExpression                                                   # BitNotExpression
-	| Not singleExpression                                                   # NotExpression
+	| BitNot singleExpression                                                   # JavascriptBitNotExpression
+	| Not singleExpression                                                   # JavascriptNotExpression
 	| singleExpression (Multiply | Divide | Modulus) singleExpression                    # MultiplicativeExpression
-	| singleExpression (Plus | Minus) singleExpression                          # AdditiveExpression
-	| singleExpression (LeftShiftArithmetic | RightShiftArithmetic | RightShiftLogical) singleExpression                # BitShiftExpression
-	| singleExpression (LessThan | MoreThan | LessThanEquals | GreaterThanEquals) singleExpression            # RelationalExpression
-	| singleExpression Instanceof singleExpression                           # InstanceofExpression
-	| singleExpression In singleExpression                                   # InExpression
-	| singleExpression (Equals_ | NotEquals | IdentityEquals | IdentityNotEquals) singleExpression        # EqualityExpression
+	| singleExpression (Plus | Minus) singleExpression                          # JavascriptAdditiveExpression
+	| singleExpression (LeftShiftArithmetic | RightShiftArithmetic | RightShiftLogical) singleExpression                # JavascriptBitShiftExpression
+	| singleExpression (LessThan | MoreThan | LessThanEquals | GreaterThanEquals) singleExpression            # JavascriptRelationalExpression
+	| singleExpression Instanceof singleExpression                           # JavascriptInstanceofExpression
+	| singleExpression In singleExpression                                   # JavascriptInExpression
+	| singleExpression (Equals_ | NotEquals | IdentityEquals | IdentityNotEquals) singleExpression        # JavascriptEqualityExpression
 	| singleExpression BitAnd singleExpression                                  # BitAndExpression
 	| singleExpression BitXOr singleExpression                                  # BitXOrExpression
 	| singleExpression BitOr singleExpression                                  # BitOrExpression
-	| singleExpression And singleExpression                                 # LogicalAndExpression
-	| singleExpression Or singleExpression                                 # LogicalOrExpression
+	| singleExpression And singleExpression                                 # JavascriptLogicalAndExpression
+	| singleExpression Or singleExpression                                 # JavascriptLogicalOrExpression
 	| singleExpression QuestionMark singleExpression Colon singleExpression             # TernaryExpression
 	| singleExpression Assign singleExpression                                  # AssignmentExpression
 	| singleExpression assignmentOperator singleExpression                   # AssignmentOperatorExpression
 	| singleExpression TemplateStringLiteral                                 # TemplateStringExpression  // ECMAScript 6
 	| This                                                                   # ThisExpression
-	| Identifier                                                             # IdentifierExpression
+	| Identifier                                                             # JavascriptIdentifierExpression
 	| Super                                                                  # SuperExpression
-	| literal                                                                # LiteralExpression
-	| arrayLiteral                                                           # ArrayLiteralExpression
-	| objectLiteral                                                          # ObjectLiteralExpression
-	| OpenParen expressionSequence CloseParen                                             # ParenthesizedExpression
+	| literal                                                                # JavascriptLiteralExpression
+	| arrayLiteral                                                           # JavascriptArrayLiteralExpression
+	| objectLiteral                                                          # JavascriptObjectLiteralExpression
+	| OpenParen expressionSequence CloseParen                                             # JavascriptParenthesizedExpression
 	| arrowFunctionParameters Arrow arrowFunctionBody                         # ArrowFunctionExpression   // ECMAScript 6
 	;
 

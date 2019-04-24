@@ -72,8 +72,8 @@ namespace RavenQueryParser.Tests
             
             Assert.True(ast.javascriptBlock().sourceCode.TryGetChild<QueryParser.ReturnStatementContext>(out _));
 
-            Assert.True(ast.javascriptBlock().TryGetChild<QueryParser.AdditiveExpressionContext>(out var returnedExpression));
-            var identifiers = returnedExpression.GetAllChildrenOfType<QueryParser.IdentifierExpressionContext>().ToList();
+            Assert.True(ast.javascriptBlock().TryGetChild<QueryParser.JavascriptAdditiveExpressionContext>(out var returnedExpression));
+            var identifiers = returnedExpression.GetAllChildrenOfType<QueryParser.JavascriptIdentifierExpressionContext>().ToList();
 
             Assert.Equal(2, identifiers.Count);
             Assert.Equal("a", identifiers[0].GetText());
@@ -258,6 +258,229 @@ namespace RavenQueryParser.Tests
             Assert.Equal(2, _errorListener.Errors.Count);
             Assert.Contains("document id", _errorListener.Errors[0].Message);
             Assert.Contains("','", _errorListener.Errors[1].Message);
+        }
+
+        [Fact]
+        public void Can_parse_between_expression()
+        {
+            //conditionExpression
+            var parser =
+                new QueryParser(
+                    new CommonTokenStream(
+                        new QueryLexer(new AntlrInputStream("x between 0 and 5"))));
+            parser.AddErrorListener(_errorListener);
+
+            var ast = parser.conditionExpression();
+            Assert.Empty(_errorListener.Errors);
+
+            Assert.True(ast.TryGetChild<QueryParser.QueryIdentifierExpressionContext>(out var identifierContext));
+            Assert.Equal("x",identifierContext.GetText());
+
+            var literals = ast.GetAllChildrenOfType<QueryParser.QueryLiteralContext>().Select(x => x.GetText()).ToArray();
+            
+            Assert.Equal(2, literals.Length);
+            Assert.Contains("0", literals);
+            Assert.Contains("5", literals);
+        }
+        
+        [Fact]
+        public void Throw_error_on_missing_from_in_between_expression()
+        {
+            //conditionExpression
+            var parser =
+                new QueryParser(
+                    new CommonTokenStream(
+                        new QueryLexer(new AntlrInputStream("x between and 5"))));
+            parser.AddErrorListener(_errorListener);
+
+            parser.conditionExpression();
+            Assert.Single(_errorListener.Errors);
+            Assert.Contains("'from'", _errorListener.Errors[0].Message);
+        }
+        
+        [Fact]
+        public void Throw_error_on_missing_to_in_between_expression()
+        {
+            //conditionExpression
+            var parser =
+                new QueryParser(
+                    new CommonTokenStream(
+                        new QueryLexer(new AntlrInputStream("x between 1 and"))));
+            parser.AddErrorListener(_errorListener);
+
+            parser.conditionExpression();
+            Assert.Single(_errorListener.Errors);
+            Assert.Contains("'to'", _errorListener.Errors[0].Message);
+        }
+        
+        [Fact]
+        public void Throw_error_on_missing_and_in_between_expression()
+        {
+            //conditionExpression
+            var parser =
+                new QueryParser(
+                    new CommonTokenStream(
+                        new QueryLexer(new AntlrInputStream("x between 1 4"))));
+            parser.AddErrorListener(_errorListener);
+
+            parser.conditionExpression();
+            Assert.Single(_errorListener.Errors);
+            Assert.Contains("'and'", _errorListener.Errors[0].Message);
+        }
+        
+        [Fact]
+        public void Throw_error_on_missing_to_and_from_in_between_expression()
+        {
+            //conditionExpression
+            var parser =
+                new QueryParser(
+                    new CommonTokenStream(
+                        new QueryLexer(new AntlrInputStream("x between"))));
+            parser.AddErrorListener(_errorListener);
+
+            parser.conditionExpression();
+            Assert.Single(_errorListener.Errors);
+            Assert.Contains("'from'", _errorListener.Errors[0].Message);
+            Assert.Contains("'to'", _errorListener.Errors[0].Message);
+        }
+        
+        [Fact]
+        public void Can_parse_in_expression()
+        {
+            //conditionExpression
+            var parser =
+                new QueryParser(
+                    new CommonTokenStream(
+                        new QueryLexer(new AntlrInputStream("x in (0,2,4)"))));
+            parser.AddErrorListener(_errorListener);
+
+            var ast = parser.conditionExpression();
+            Assert.Empty(_errorListener.Errors);
+
+            Assert.True(ast.TryGetChild<QueryParser.QueryIdentifierExpressionContext>(out var identifierContext));
+            Assert.Equal("x",identifierContext.GetText());
+
+            var literals = ast.GetAllChildrenOfType<QueryParser.QueryLiteralContext>().Select(x => x.GetText()).ToArray();
+            
+            Assert.Equal(3, literals.Length);
+            Assert.Contains("0", literals);
+            Assert.Contains("2", literals);
+            Assert.Contains("4", literals);
+        }
+        
+        [Fact]
+        public void Can_parse_all_in_expression()
+        {
+            //conditionExpression
+            var parser =
+                new QueryParser(
+                    new CommonTokenStream(
+                        new QueryLexer(new AntlrInputStream("x all in (0,2,4)"))));
+            parser.AddErrorListener(_errorListener);
+
+            var ast = parser.conditionExpression();
+            Assert.Empty(_errorListener.Errors);
+
+            Assert.True(ast.TryGetChild<QueryParser.QueryIdentifierExpressionContext>(out var identifierContext));
+            Assert.Equal("x",identifierContext.GetText());
+
+            var literals = ast.GetAllChildrenOfType<QueryParser.QueryLiteralContext>().Select(x => x.GetText()).ToArray();
+            
+            Assert.Equal(3, literals.Length);
+            Assert.Contains("0", literals);
+            Assert.Contains("2", literals);
+            Assert.Contains("4", literals);
+        }
+        
+        [Fact]
+        public void Throw_error_on_missing_comma_in_expression()
+        {
+            //conditionExpression
+            var parser =
+                new QueryParser(
+                    new CommonTokenStream(
+                        new QueryLexer(new AntlrInputStream("x in (0 2)"))));
+            parser.AddErrorListener(_errorListener);
+
+            parser.conditionExpression();
+            Assert.Single(_errorListener.Errors);
+            Assert.Contains("','", _errorListener.Errors[0].Message);
+        }
+        
+        [Fact]
+        public void Throw_error_on_missing_keyword_in_expression()
+        {
+            //conditionExpression
+            var parser =
+                new QueryParser(
+                    new CommonTokenStream(
+                        new QueryLexer(new AntlrInputStream("x (0,2)"))));
+            parser.AddErrorListener(_errorListener);
+
+            parser.conditionExpression();
+            Assert.Single(_errorListener.Errors);
+            Assert.Contains("'in'", _errorListener.Errors[0].Message);
+            Assert.Contains("'all in'", _errorListener.Errors[0].Message);
+        }
+        
+        [Fact]
+        public void Throw_error_on_missing_left_bracket_in_expression()
+        {
+            //conditionExpression
+            var parser =
+                new QueryParser(
+                    new CommonTokenStream(
+                        new QueryLexer(new AntlrInputStream("x in 0,2,4)"))));
+            parser.AddErrorListener(_errorListener);
+
+            parser.conditionExpression();
+            Assert.Single(_errorListener.Errors);
+            Assert.Contains("'('", _errorListener.Errors[0].Message);
+        }
+        
+        [Fact]
+        public void Throw_error_on_missing_left_bracket_all_in_expression()
+        {
+            //conditionExpression
+            var parser =
+                new QueryParser(
+                    new CommonTokenStream(
+                        new QueryLexer(new AntlrInputStream("x all in 0,2,4)"))));
+            parser.AddErrorListener(_errorListener);
+
+            parser.conditionExpression();
+            Assert.Single(_errorListener.Errors);
+            Assert.Contains("'('", _errorListener.Errors[0].Message);
+        }
+        
+        [Fact]
+        public void Throw_error_on_missing_right_bracket_in_expression()
+        {
+            //conditionExpression
+            var parser =
+                new QueryParser(
+                    new CommonTokenStream(
+                        new QueryLexer(new AntlrInputStream("x in (0,2,4"))));
+            parser.AddErrorListener(_errorListener);
+
+            parser.conditionExpression();
+            Assert.Single(_errorListener.Errors);
+            Assert.Contains("')'", _errorListener.Errors[0].Message);
+        }
+        
+        [Fact]
+        public void Throw_error_on_missing_right_bracket_all_in_expression()
+        {
+            //conditionExpression
+            var parser =
+                new QueryParser(
+                    new CommonTokenStream(
+                        new QueryLexer(new AntlrInputStream("x all in (0,2,4"))));
+            parser.AddErrorListener(_errorListener);
+
+            parser.conditionExpression();
+            Assert.Single(_errorListener.Errors);
+            Assert.Contains("')'", _errorListener.Errors[0].Message);
         }
     }
 }

@@ -1,33 +1,13 @@
 lexer grammar QueryLexer;
 
-@members{
-	
-[System.Flags]
-public enum LexerState
-{
-	DefaultMode = 0,
-	FunctionMode = 1,
-	GraphMode = 2,
-	FunctionImplementationMode = 4
-}
-
-public LexerState CurrentState;
-
-public IToken CurrentToken;
-
-internal void SetStateFlag(LexerState flag) => CurrentState |= flag;
-internal void UnsetStateFlag(LexerState flag) => CurrentState &= ~flag;
-
-}
-
 channels { COMMENT, ERROR, WHITESPACE }
 
 //query entry points
 FROM: 'from';
-MATCH: 'match' { UnsetStateFlag(LexerState.DefaultMode); SetStateFlag(LexerState.GraphMode); } -> mode(Graph);
- 
+MATCH: 'match' -> mode(Graph);
+
 //keywords
-DECLARE_FUNCTION: 'declare function' { UnsetStateFlag(LexerState.DefaultMode); SetStateFlag(LexerState.FunctionMode); };
+DECLARE_FUNCTION: 'declare function';
 WHERE : 'where';
 BETWEEN: 'between';
 INCLUDE: 'include';
@@ -40,7 +20,7 @@ DESC: 'desc'; //for orderby clauses
 EDGES: 'edges';
 ALL_DOCS: '@all_docs';
 UPDATE: 'update';
-WITH: 'with';
+WITH: 'with' -> mode(Graph);
 AND: 'and';
 OR: 'or';
 NOT: 'not';
